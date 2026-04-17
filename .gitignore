@@ -1,0 +1,26 @@
+# Backend - Maven / Java
+backend/target/
+backend/.mvn/
+backend/*.jar
+backend/*.war
+backend/uploads/
+*.class
+*.log
+
+# Frontend - Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+.DS_Store
+
+# Docker
+docker-compose.override.yml
