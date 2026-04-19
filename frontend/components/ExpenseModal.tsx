@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, ArrowRightLeft } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { X, Upload, File as FileIcon, Loader2 } from 'lucide-react'
 import { Category, Expense, ExpenseRequest } from '@/lib/types'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -19,6 +19,8 @@ export default function ExpenseModal({ expense, categories, onSaved, onClose }: 
   const isEditing = !!expense
   const [loading, setLoading] = useState(false)
   const [invoices, setInvoices] = useState(expense?.invoices ?? [])
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<ExpenseRequest>({
     name: expense?.name ?? '',
     amount: expense?.amount ?? ('' as any),
@@ -37,9 +39,15 @@ export default function ExpenseModal({ expense, categories, onSaved, onClose }: 
     try {
       if (isEditing) {
         await api.expenses.update(expense.id, form)
+        if (pendingFile) {
+          await api.invoices.upload(expense.id, pendingFile)
+        }
         toast.success('Gasto actualizado')
       } else {
-        await api.expenses.create(form)
+        const created = await api.expenses.create(form)
+        if (pendingFile) {
+          await api.invoices.upload(created.id, pendingFile)
+        }
         toast.success('Gasto creado')
       }
       onSaved()
@@ -127,22 +135,54 @@ export default function ExpenseModal({ expense, categories, onSaved, onClose }: 
             </div>
           </form>
 
-          {isEditing && (
-            <div className="mt-6 space-y-3">
-              <h3 className="text-sm font-medium text-slate-700">Facturas adjuntas</h3>
-              {invoices.map(inv => (
-                <InvoiceCard
-                  key={inv.id}
-                  invoice={inv}
-                  onDeleted={id => setInvoices(i => i.filter(x => x.id !== id))}
-                />
-              ))}
+          <div className="mt-6 space-y-3">
+            <h3 className="text-sm font-medium text-slate-700">Facturas adjuntas</h3>
+            {isEditing && invoices.map(inv => (
+              <InvoiceCard
+                key={inv.id}
+                invoice={inv}
+                onDeleted={id => setInvoices(i => i.filter(x => x.id !== id))}
+              />
+            ))}
+            {isEditing ? (
               <UploadZone
                 expenseId={expense.id}
                 onUploaded={inv => setInvoices(i => [...i, inv])}
               />
-            </div>
-          )}
+            ) : (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  onChange={e => setPendingFile(e.target.files?.[0] ?? null)}
+                />
+                {pendingFile ? (
+                  <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <FileIcon className="h-5 w-5 text-indigo-500 flex-shrink-0" />
+                    <span className="flex-1 text-sm text-slate-700 truncate">{pendingFile.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setPendingFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                      className="text-slate-400 hover:text-red-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 p-5 cursor-pointer hover:border-indigo-400 hover:bg-slate-50 transition-colors"
+                  >
+                    <Upload className="h-7 w-7 text-slate-400" />
+                    <p className="text-sm text-slate-600 font-medium">Arrastra o haz clic para adjuntar factura</p>
+                    <p className="text-xs text-slate-400">PDF, JPG, PNG hasta 20 MB (opcional)</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200">
