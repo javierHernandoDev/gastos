@@ -70,6 +70,14 @@ export interface LoginRequest {
   password: string
 }
 
+export interface InvoiceAnalysis {
+  date: string | null
+  amount: number | null
+  category: string | null
+  success: boolean
+  message?: string
+}
+
 export interface AuthResponse {
   token: string
   name: string
