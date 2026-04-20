@@ -27,7 +27,7 @@ public class InvoiceAnalysisService {
     private final ObjectMapper objectMapper;
 
     private static final String GEMINI_URL =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=";
 
     private static final String PROMPT =
         "Analiza esta factura y extrae: fecha, importe total y tipo de gasto. " +
