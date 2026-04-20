@@ -1,6 +1,6 @@
 import { Category, Expense, ExpenseRequest, Invoice, MoveExpenseRequest, YearStats } from './types'
 
-const BASE_URL = 'http://localhost:8080/api'
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {

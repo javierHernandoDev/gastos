@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Expense, Category } from '@/lib/types'
-import { Pencil, Trash2, ArrowRightLeft, FileText, Upload } from 'lucide-react'
+import { Pencil, Trash2, ArrowRightLeft, FileText } from 'lucide-react'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import ExpenseModal from './ExpenseModal'
 import MoveExpenseModal from './MoveExpenseModal'
@@ -75,7 +76,9 @@ export default function ExpenseTable({ expenses, categories, onRefresh }: Props)
               {expenses.map(exp => (
                 <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-3">
-                    <p className="font-medium text-slate-900">{exp.name}</p>
+                    <Link href={`/gastos/${exp.id}`} className="font-medium text-slate-900 hover:text-indigo-600 transition-colors">
+                      {exp.name}
+                    </Link>
                     {exp.description && (
                       <p className="text-xs text-slate-400 truncate max-w-xs">{exp.description}</p>
                     )}
