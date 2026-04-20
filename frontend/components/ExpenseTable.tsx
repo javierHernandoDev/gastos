@@ -9,7 +9,6 @@ import ExpenseModal from './ExpenseModal'
 import MoveExpenseModal from './MoveExpenseModal'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
-import clsx from 'clsx'
 
 interface Props {
   expenses: Expense[]
@@ -23,7 +22,7 @@ function formatEur(n: number) {
 
 const MONTH_NAMES = [
   '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 
 export default function ExpenseTable({ expenses, categories, onRefresh }: Props) {
@@ -59,7 +58,75 @@ export default function ExpenseTable({ expenses, categories, onRefresh }: Props)
 
   return (
     <>
-      <div className="card overflow-hidden p-0">
+      {/* ── Mobile: card list ── */}
+      <div className="md:hidden space-y-2">
+        {expenses.map(exp => (
+          <div key={exp.id} className="card p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <Link
+                  href={`/gastos/${exp.id}`}
+                  className="font-medium text-slate-900 hover:text-indigo-600 transition-colors line-clamp-1"
+                >
+                  {exp.name}
+                </Link>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  {exp.category && (
+                    <span
+                      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                      style={{
+                        backgroundColor: exp.category.color + '20',
+                        color: exp.category.color || '#6366f1',
+                      }}
+                    >
+                      {exp.category.name}
+                    </span>
+                  )}
+                  <span className="text-xs text-slate-400">{MONTH_NAMES[exp.month]}</span>
+                  {exp.invoices.length > 0 && (
+                    <span className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium">
+                      <FileText className="h-3 w-3" />
+                      {exp.invoices.length}
+                    </span>
+                  )}
+                </div>
+                {exp.description && (
+                  <p className="text-xs text-slate-400 mt-1 line-clamp-1">{exp.description}</p>
+                )}
+              </div>
+              <div className="flex-shrink-0 text-right">
+                <p className="font-semibold text-slate-900">{formatEur(exp.amount)}</p>
+                <div className="flex items-center gap-1 mt-2 justify-end">
+                  <button
+                    onClick={() => setMoveExpense(exp)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    title="Mover"
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setEditExpense(exp)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                    title="Editar"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteExpense(exp)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Desktop: table ── */}
+      <div className="hidden md:block card overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -98,9 +165,7 @@ export default function ExpenseTable({ expenses, categories, onRefresh }: Props)
                       <span className="text-slate-400 text-xs">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
-                    {MONTH_NAMES[exp.month]}
-                  </td>
+                  <td className="px-4 py-3 text-slate-500">{MONTH_NAMES[exp.month]}</td>
                   <td className="px-4 py-3 text-right font-semibold text-slate-900">
                     {formatEur(exp.amount)}
                   </td>
@@ -154,7 +219,6 @@ export default function ExpenseTable({ expenses, categories, onRefresh }: Props)
           onClose={() => setEditExpense(null)}
         />
       )}
-
       {moveExpense && (
         <MoveExpenseModal
           expense={moveExpense}
@@ -162,7 +226,6 @@ export default function ExpenseTable({ expenses, categories, onRefresh }: Props)
           onClose={() => setMoveExpense(null)}
         />
       )}
-
       {deleteExpense && (
         <DeleteConfirmModal
           title="Eliminar gasto"

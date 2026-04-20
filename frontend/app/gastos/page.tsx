@@ -44,28 +44,28 @@ export default function GastosPage() {
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Gastos</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {expenses.length} gastos · Total: <span className="font-semibold text-slate-900">{formatEur(total)}</span>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Gastos</h1>
+          <p className="text-xs md:text-sm text-slate-500 mt-0.5">
+            {expenses.length} gastos · <span className="font-semibold text-slate-900">{formatEur(total)}</span>
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <YearSelector year={year} years={years} onChange={y => { setYear(y); setMonth(null) }} />
           <button onClick={() => setShowCreate(true)} className="btn-primary">
             <Plus className="h-4 w-4" />
-            Nuevo gasto
+            <span className="hidden sm:inline">Nuevo gasto</span>
+            <span className="sm:hidden">Nuevo</span>
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2">
         <MonthTabs selected={month} onChange={setMonth} />
-
         <select
-          className="ml-auto rounded-lg border-0 bg-white py-1.5 px-3 text-sm text-slate-700 shadow-sm ring-1 ring-slate-300 focus:ring-2 focus:ring-indigo-600"
+          className="rounded-lg border-0 bg-white py-1.5 px-3 text-sm text-slate-700 shadow-sm ring-1 ring-slate-300 focus:ring-2 focus:ring-indigo-600"
           value={categoryId ?? ''}
           onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
         >

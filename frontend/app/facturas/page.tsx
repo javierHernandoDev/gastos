@@ -35,10 +35,10 @@ export default function FacturasPage() {
   }, {})
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Facturas</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Facturas</h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {invoices.length} factura{invoices.length !== 1 ? 's' : ''} en {year}
           </p>

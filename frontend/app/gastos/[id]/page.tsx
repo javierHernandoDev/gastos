@@ -93,7 +93,7 @@ export default function ExpenseDetailPage() {
   if (!expense) return null
 
   return (
-    <div className="p-8 space-y-6 max-w-2xl mx-auto">
+    <div className="p-4 md:p-8 space-y-4 md:space-y-6 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -106,35 +106,34 @@ export default function ExpenseDetailPage() {
       </div>
 
       {/* Title + actions */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{expense.name}</h1>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 truncate">{expense.name}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {MONTH_NAMES[expense.month]} {expense.year}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
             onClick={() => setShowMove(true)}
-            className="btn-secondary flex items-center gap-1.5"
+            className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border border-slate-200 bg-white"
             title="Mover"
           >
             <ArrowRightLeft className="h-4 w-4" />
-            Mover
           </button>
           <button
             onClick={() => setShowEdit(true)}
-            className="btn-secondary flex items-center gap-1.5"
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors border border-slate-200 bg-white"
+            title="Editar"
           >
             <Pencil className="h-4 w-4" />
-            Editar
           </button>
           <button
             onClick={() => setShowDelete(true)}
-            className="btn-danger flex items-center gap-1.5"
+            className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors border border-red-200 bg-white"
+            title="Eliminar"
           >
             <Trash2 className="h-4 w-4" />
-            Eliminar
           </button>
         </div>
       </div>
@@ -145,7 +144,7 @@ export default function ExpenseDetailPage() {
           Detalles del gasto
         </h2>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-50">
               <Euro className="h-4 w-4 text-indigo-600" />

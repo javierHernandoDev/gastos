@@ -31,10 +31,10 @@ export default function DashboardPage() {
   }, [year])
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-sm text-slate-500 mt-0.5">Resumen de gastos del hogar</p>
         </div>
         <YearSelector year={year} years={years} onChange={setYear} />
@@ -62,18 +62,18 @@ export default function DashboardPage() {
                 ? Math.round((m.amount / stats.totalAmount) * 100)
                 : 0
               return (
-                <div key={m.month} className="flex items-center gap-4">
-                  <span className="w-24 text-sm text-slate-600 flex-shrink-0">{m.monthName}</span>
+                <div key={m.month} className="flex items-center gap-2 md:gap-4">
+                  <span className="w-8 md:w-24 text-xs md:text-sm text-slate-600 flex-shrink-0">{m.monthName.slice(0, 3)}<span className="hidden md:inline">{m.monthName.slice(3)}</span></span>
                   <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-indigo-500 rounded-full transition-all duration-500"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <span className="w-28 text-sm font-medium text-slate-900 text-right">
+                  <span className="w-20 md:w-28 text-xs md:text-sm font-medium text-slate-900 text-right">
                     {formatEur(m.amount)}
                   </span>
-                  <span className="w-8 text-xs text-slate-400 text-right">{pct}%</span>
+                  <span className="hidden sm:block w-8 text-xs text-slate-400 text-right">{pct}%</span>
                 </div>
               )
             })}
