@@ -37,6 +37,11 @@ public class InvoiceController {
         return ResponseEntity.ok(invoiceService.upload(expenseId, file));
     }
 
+    @GetMapping("/models")
+    public ResponseEntity<String> listModels() {
+        return ResponseEntity.ok(invoiceAnalysisService.listModels());
+    }
+
     @PostMapping("/analyze")
     public ResponseEntity<InvoiceAnalysisResponse> analyze(
             @RequestParam("file") MultipartFile file) {

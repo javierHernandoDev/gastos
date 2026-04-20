@@ -37,6 +37,17 @@ public class InvoiceAnalysisService {
         "Comunidad, Reformas, Mantenimiento, Otros. " +
         "Si no puedes determinar un campo usa null.";
 
+    public String listModels() {
+        try {
+            RestTemplate rest = new RestTemplate();
+            return rest.getForObject(
+                "https://generativelanguage.googleapis.com/v1/models?key=" + apiKey,
+                String.class);
+        } catch (Exception e) {
+            return "Error: " + e.getMessage();
+        }
+    }
+
     public InvoiceAnalysisResponse analyze(MultipartFile file) {
         if (apiKey == null || apiKey.isBlank()) {
             return InvoiceAnalysisResponse.builder()
