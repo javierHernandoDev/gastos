@@ -13,7 +13,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     },
     ...options,
   })
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 403) {
     removeToken()
     window.location.href = '/login'
     throw new Error('Sesión expirada')
@@ -78,7 +78,7 @@ export const api = {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
       })
-      if (res.status === 401) {
+      if (res.status === 401 || res.status === 403) {
         removeToken()
         window.location.href = '/login'
         throw new Error('Sesión expirada')
