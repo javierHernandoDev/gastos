@@ -3,7 +3,7 @@ import { getToken, removeToken } from './auth'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api'
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, skipAuthRedirect = false): Promise<T> {
   const token = getToken()
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: {
@@ -13,7 +13,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     },
     ...options,
   })
-  if (res.status === 401 || res.status === 403) {
+  if (!skipAuthRedirect && (res.status === 401 || res.status === 403)) {
     removeToken()
     window.location.href = '/login'
     throw new Error('Sesión expirada')
@@ -29,9 +29,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   auth: {
     register: (data: RegisterRequest) =>
-      request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+      request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }, true),
     login: (data: LoginRequest) =>
-      request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+      request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }, true),
     me: () => request<AuthResponse>('/auth/me'),
   },
 
