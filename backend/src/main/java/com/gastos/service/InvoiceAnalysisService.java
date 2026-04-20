@@ -1,73 +1,37 @@
 package com.gastos.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gastos.dto.InvoiceAnalysisResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class InvoiceAnalysisService {
 
-    @Value("${GOOGLE_AI_API_KEY:}")
-    private String apiKey;
-
-    private final ObjectMapper objectMapper;
-
-    private static final String GEMINI_URL =
-        "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-lite:generateContent?key=";
-
-    private static final String PROMPT =
-        "Analiza esta factura y extrae: fecha, importe total y tipo de gasto. " +
-        "Responde ÚNICAMENTE con JSON válido sin texto adicional:\n" +
-        "{\"date\":\"YYYY-MM-DD\",\"amount\":123.45,\"category\":\"nombre\"}\n" +
-        "Para category elige la más adecuada: Hipoteca, Suministros, Seguros, " +
-        "Comunidad, Reformas, Mantenimiento, Otros. " +
-        "Si no puedes determinar un campo usa null.";
-
     public InvoiceAnalysisResponse analyze(MultipartFile file) {
-        if (apiKey == null || apiKey.isBlank()) {
+        String contentType = file.getContentType() != null ? file.getContentType() : "";
+
+        if (!contentType.equals("application/pdf")) {
             return InvoiceAnalysisResponse.builder()
                     .success(false)
-                    .message("GOOGLE_AI_API_KEY no configurada en el servidor")
+                    .message("El análisis automático solo funciona con PDF. El archivo se adjuntará igualmente.")
                     .build();
         }
 
         try {
-            String contentType = file.getContentType() != null ? file.getContentType() : "";
-            String rawResponse;
-
-            if (contentType.startsWith("image/")) {
-                rawResponse = callWithImage(file.getBytes(), contentType);
-            } else if (contentType.equals("application/pdf")) {
-                String text = extractPdfText(file.getBytes());
-                rawResponse = callWithText(text);
-            } else {
-                return InvoiceAnalysisResponse.builder()
-                        .success(false)
-                        .message("Formato no soportado. Usa PDF, JPG o PNG")
-                        .build();
-            }
-
-            return parseResponse(rawResponse);
-
+            String text = extractPdfText(file.getBytes());
+            return parseText(text);
         } catch (Exception e) {
-            log.error("Error analizando factura", e);
+            log.error("Error procesando PDF", e);
             return InvoiceAnalysisResponse.builder()
                     .success(false)
-                    .message("Error al analizar: " + e.getMessage())
+                    .message("No se pudo leer el PDF")
                     .build();
         }
     }
@@ -78,70 +42,100 @@ public class InvoiceAnalysisService {
         }
     }
 
-    private String callWithImage(byte[] bytes, String mediaType) throws Exception {
-        String base64 = Base64.getEncoder().encodeToString(bytes);
-
-        Map<String, Object> inlineData = new LinkedHashMap<>();
-        inlineData.put("mime_type", mediaType);
-        inlineData.put("data", base64);
-
-        Map<String, Object> imagePart = new LinkedHashMap<>();
-        imagePart.put("inline_data", inlineData);
-
-        Map<String, Object> textPart = new LinkedHashMap<>();
-        textPart.put("text", PROMPT);
-
-        return post(List.of(imagePart, textPart));
+    private InvoiceAnalysisResponse parseText(String text) {
+        return InvoiceAnalysisResponse.builder()
+                .date(extractDate(text))
+                .amount(extractAmount(text))
+                .category(guessCategory(text))
+                .success(true)
+                .build();
     }
 
-    private String callWithText(String text) throws Exception {
-        Map<String, Object> textPart = new LinkedHashMap<>();
-        textPart.put("text", "Texto de la factura:\n\n" + text + "\n\n" + PROMPT);
+    private String extractDate(String text) {
+        // YYYY-MM-DD
+        Matcher m = Pattern.compile("(\\d{4})[/\\-.](\\d{2})[/\\-.](\\d{2})").matcher(text);
+        if (m.find()) return m.group(1) + "-" + m.group(2) + "-" + m.group(3);
 
-        return post(List.of(textPart));
-    }
-
-    private String post(List<Map<String, Object>> parts) throws Exception {
-        Map<String, Object> content = new LinkedHashMap<>();
-        content.put("parts", parts);
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("contents", List.of(content));
-
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(10_000);
-        factory.setReadTimeout(30_000);
-        RestTemplate rest = new RestTemplate(factory);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        String json = objectMapper.writeValueAsString(body);
-        ResponseEntity<String> response = rest.postForEntity(
-                GEMINI_URL + apiKey, new HttpEntity<>(json, headers), String.class);
-        return response.getBody();
-    }
-
-    private InvoiceAnalysisResponse parseResponse(String raw) throws Exception {
-        JsonNode root = objectMapper.readTree(raw);
-        String text = root.path("candidates").get(0)
-                .path("content").path("parts").get(0)
-                .path("text").asText();
-
-        int start = text.indexOf('{');
-        int end = text.lastIndexOf('}');
-        if (start == -1 || end == -1) {
-            return InvoiceAnalysisResponse.builder()
-                    .success(false).message("No se encontraron datos en la factura").build();
+        // DD/MM/YYYY or DD-MM-YYYY
+        m = Pattern.compile("(\\d{1,2})[/\\-.](\\d{1,2})[/\\-.](\\d{4})").matcher(text);
+        if (m.find()) {
+            String d = pad(m.group(1)), mo = pad(m.group(2)), y = m.group(3);
+            return y + "-" + mo + "-" + d;
         }
 
-        JsonNode data = objectMapper.readTree(text.substring(start, end + 1));
-        String date = data.path("date").isNull() ? null : data.path("date").asText(null);
-        Double amount = data.path("amount").isNull() ? null : data.path("amount").asDouble();
-        String category = data.path("category").isNull() ? null : data.path("category").asText(null);
+        // "15 de enero de 2025"
+        m = Pattern.compile("(\\d{1,2})\\s+de\\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\\s+de\\s+(\\d{4})",
+                Pattern.CASE_INSENSITIVE).matcher(text);
+        if (m.find()) {
+            String d = pad(m.group(1)), mo = pad(String.valueOf(monthIndex(m.group(2)))), y = m.group(3);
+            return y + "-" + mo + "-" + d;
+        }
 
-        return InvoiceAnalysisResponse.builder()
-                .date(date).amount(amount).category(category)
-                .success(true).build();
+        return null;
+    }
+
+    private Double extractAmount(String text) {
+        // Look near keywords: total, importe, a pagar
+        Pattern keywordAmount = Pattern.compile(
+                "(?:total|importe total|a pagar|total a pagar|subtotal)[^\\d]{0,20}(\\d{1,6}[.,]\\d{2})",
+                Pattern.CASE_INSENSITIVE);
+        Matcher m = keywordAmount.matcher(text);
+        if (m.find()) return toDouble(m.group(1));
+
+        // €123,45 or 123,45 €
+        Pattern euroAmount = Pattern.compile("€\\s*(\\d{1,6}[.,]\\d{2})|(\\d{1,6}[.,]\\d{2})\\s*€");
+        m = euroAmount.matcher(text);
+        double max = 0;
+        while (m.find()) {
+            String raw = m.group(1) != null ? m.group(1) : m.group(2);
+            double val = toDouble(raw);
+            if (val > max) max = val;
+        }
+        return max > 0 ? max : null;
+    }
+
+    private String guessCategory(String text) {
+        String t = text.toLowerCase();
+        if (has(t, "hipoteca", "préstamo hipotecario", "prestamo hipotecario")) return "Hipoteca";
+        if (has(t, "electricidad", "endesa", "iberdrola", "naturgy", "gas natural", "fenosa",
+                "repsol", "viesgo", "hidrocantábrico", "agua", "suministro", "tarifa eléctrica")) return "Suministros";
+        if (has(t, "seguro", "prima", "póliza", "poliza", "axa", "mapfre", "allianz",
+                "generali", "mutua", "zurich")) return "Seguros";
+        if (has(t, "comunidad de propietarios", "comunidad", "administrador de fincas",
+                "junta de propietarios")) return "Comunidad";
+        if (has(t, "obra", "reforma", "instalación", "instalacion", "fontanero",
+                "electricista", "albañil", "alicatado", "pintura")) return "Reformas";
+        if (has(t, "mantenimiento", "reparación", "reparacion", "avería", "averia",
+                "servicio técnico", "revision", "revisión")) return "Mantenimiento";
+        return "Otros";
+    }
+
+    private boolean has(String text, String... keywords) {
+        for (String k : keywords) if (text.contains(k)) return true;
+        return false;
+    }
+
+    private String pad(String n) {
+        return n.length() == 1 ? "0" + n : n;
+    }
+
+    private double toDouble(String s) {
+        s = s.trim();
+        if (s.contains(",") && s.contains(".")) {
+            s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(".", "").replace(",", ".") : s.replace(",", "");
+        } else {
+            s = s.replace(",", ".");
+        }
+        try { return Double.parseDouble(s); } catch (Exception e) { return 0; }
+    }
+
+    private int monthIndex(String name) {
+        return switch (name.toLowerCase()) {
+            case "enero" -> 1; case "febrero" -> 2; case "marzo" -> 3;
+            case "abril" -> 4; case "mayo" -> 5; case "junio" -> 6;
+            case "julio" -> 7; case "agosto" -> 8; case "septiembre" -> 9;
+            case "octubre" -> 10; case "noviembre" -> 11; case "diciembre" -> 12;
+            default -> 1;
+        };
     }
 }
