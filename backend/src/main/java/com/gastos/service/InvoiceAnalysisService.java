@@ -27,7 +27,7 @@ public class InvoiceAnalysisService {
     private final ObjectMapper objectMapper;
 
     private static final String GEMINI_URL =
-        "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=";
+        "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-lite:generateContent?key=";
 
     private static final String PROMPT =
         "Analiza esta factura y extrae: fecha, importe total y tipo de gasto. " +
@@ -36,17 +36,6 @@ public class InvoiceAnalysisService {
         "Para category elige la más adecuada: Hipoteca, Suministros, Seguros, " +
         "Comunidad, Reformas, Mantenimiento, Otros. " +
         "Si no puedes determinar un campo usa null.";
-
-    public String listModels() {
-        try {
-            RestTemplate rest = new RestTemplate();
-            return rest.getForObject(
-                "https://generativelanguage.googleapis.com/v1/models?key=" + apiKey,
-                String.class);
-        } catch (Exception e) {
-            return "Error: " + e.getMessage();
-        }
-    }
 
     public InvoiceAnalysisResponse analyze(MultipartFile file) {
         if (apiKey == null || apiKey.isBlank()) {
