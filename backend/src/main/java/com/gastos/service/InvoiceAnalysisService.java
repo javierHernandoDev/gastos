@@ -21,13 +21,14 @@ import java.util.*;
 @Slf4j
 public class InvoiceAnalysisService {
 
-    @Value("${ANTHROPIC_API_KEY:}")
+    @Value("${GOOGLE_AI_API_KEY:}")
     private String apiKey;
 
     private final ObjectMapper objectMapper;
 
-    private static final String CLAUDE_URL = "https://api.anthropic.com/v1/messages";
-    private static final String MODEL = "claude-haiku-4-5-20251001";
+    private static final String GEMINI_URL =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
+
     private static final String PROMPT =
         "Analiza esta factura y extrae: fecha, importe total y tipo de gasto. " +
         "Responde ÚNICAMENTE con JSON válido sin texto adicional:\n" +
@@ -40,7 +41,7 @@ public class InvoiceAnalysisService {
         if (apiKey == null || apiKey.isBlank()) {
             return InvoiceAnalysisResponse.builder()
                     .success(false)
-                    .message("ANTHROPIC_API_KEY no configurada en el servidor")
+                    .message("GOOGLE_AI_API_KEY no configurada en el servidor")
                     .build();
         }
 
@@ -80,39 +81,32 @@ public class InvoiceAnalysisService {
     private String callWithImage(byte[] bytes, String mediaType) throws Exception {
         String base64 = Base64.getEncoder().encodeToString(bytes);
 
-        Map<String, Object> imageSource = new LinkedHashMap<>();
-        imageSource.put("type", "base64");
-        imageSource.put("media_type", mediaType);
-        imageSource.put("data", base64);
+        Map<String, Object> inlineData = new LinkedHashMap<>();
+        inlineData.put("mime_type", mediaType);
+        inlineData.put("data", base64);
 
-        Map<String, Object> imageBlock = new LinkedHashMap<>();
-        imageBlock.put("type", "image");
-        imageBlock.put("source", imageSource);
+        Map<String, Object> imagePart = new LinkedHashMap<>();
+        imagePart.put("inline_data", inlineData);
 
-        Map<String, Object> textBlock = new LinkedHashMap<>();
-        textBlock.put("type", "text");
-        textBlock.put("text", PROMPT);
+        Map<String, Object> textPart = new LinkedHashMap<>();
+        textPart.put("text", PROMPT);
 
-        Map<String, Object> message = new LinkedHashMap<>();
-        message.put("role", "user");
-        message.put("content", List.of(imageBlock, textBlock));
-
-        return post(message);
+        return post(List.of(imagePart, textPart));
     }
 
     private String callWithText(String text) throws Exception {
-        Map<String, Object> message = new LinkedHashMap<>();
-        message.put("role", "user");
-        message.put("content", "Texto de la factura:\n\n" + text + "\n\n" + PROMPT);
+        Map<String, Object> textPart = new LinkedHashMap<>();
+        textPart.put("text", "Texto de la factura:\n\n" + text + "\n\n" + PROMPT);
 
-        return post(message);
+        return post(List.of(textPart));
     }
 
-    private String post(Map<String, Object> message) throws Exception {
+    private String post(List<Map<String, Object>> parts) throws Exception {
+        Map<String, Object> content = new LinkedHashMap<>();
+        content.put("parts", parts);
+
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", MODEL);
-        body.put("max_tokens", 256);
-        body.put("messages", List.of(message));
+        body.put("contents", List.of(content));
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
@@ -121,18 +115,18 @@ public class InvoiceAnalysisService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-api-key", apiKey);
-        headers.set("anthropic-version", "2023-06-01");
 
         String json = objectMapper.writeValueAsString(body);
         ResponseEntity<String> response = rest.postForEntity(
-                CLAUDE_URL, new HttpEntity<>(json, headers), String.class);
+                GEMINI_URL + apiKey, new HttpEntity<>(json, headers), String.class);
         return response.getBody();
     }
 
     private InvoiceAnalysisResponse parseResponse(String raw) throws Exception {
         JsonNode root = objectMapper.readTree(raw);
-        String text = root.path("content").get(0).path("text").asText();
+        String text = root.path("candidates").get(0)
+                .path("content").path("parts").get(0)
+                .path("text").asText();
 
         int start = text.indexOf('{');
         int end = text.lastIndexOf('}');
