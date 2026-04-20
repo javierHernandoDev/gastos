@@ -8,6 +8,14 @@
   }
 }
 
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-nav {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
 @layer components {
   .btn-primary {
     @apply inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:opacity-50;

@@ -95,7 +95,10 @@ export default function Sidebar() {
       </header>
 
       {/* ── Mobile bottom navigation ── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 flex">
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-800 flex bottom-nav"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         {nav.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
