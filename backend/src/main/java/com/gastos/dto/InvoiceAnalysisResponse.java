@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InvoiceAnalysisResponse {
+    private String name;
     private String date;
     private Double amount;
     private String category;

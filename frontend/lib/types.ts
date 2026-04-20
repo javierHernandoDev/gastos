@@ -71,6 +71,7 @@ export interface LoginRequest {
 }
 
 export interface InvoiceAnalysis {
+  name: string | null
   date: string | null
   amount: number | null
   category: string | null

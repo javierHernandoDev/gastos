@@ -44,6 +44,10 @@ export default function ExpenseModal({ expense, categories, onSaved, onClose }: 
       if (result.success) {
         const filled: string[] = []
 
+        if (result.name) {
+          set('name', result.name)
+          filled.push('nombre')
+        }
         if (result.date) {
           set('date', result.date)
           filled.push('fecha')

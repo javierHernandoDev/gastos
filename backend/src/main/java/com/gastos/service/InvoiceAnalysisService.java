@@ -44,11 +44,40 @@ public class InvoiceAnalysisService {
 
     private InvoiceAnalysisResponse parseText(String text) {
         return InvoiceAnalysisResponse.builder()
+                .name(extractName(text))
                 .date(extractDate(text))
                 .amount(extractAmount(text))
                 .category(guessCategory(text))
                 .success(true)
                 .build();
+    }
+
+    private String extractName(String text) {
+        // Look for explicit label: "Concepto:", "Descripción:", "Servicio:", "Factura Nº" + line
+        Matcher m = Pattern.compile(
+                "(?:concepto|descripci[oó]n|servicio|objeto)[:\\s]+([^\\n\\r]{3,80})",
+                Pattern.CASE_INSENSITIVE).matcher(text);
+        if (m.find()) return m.group(1).trim();
+
+        // "FACTURA" followed by a short label on the same or next non-blank line
+        m = Pattern.compile("FACTURA[^\\n]*\\n+([A-ZÁÉÍÓÚÑ][^\\n]{3,60})", Pattern.CASE_INSENSITIVE).matcher(text);
+        if (m.find()) {
+            String candidate = m.group(1).trim();
+            // Skip if it looks like a date or number
+            if (!candidate.matches(".*\\d{4}.*") && !candidate.toLowerCase().startsWith("n")) {
+                return candidate;
+            }
+        }
+
+        // Use first meaningful non-empty line (>= 4 chars, not a number/date)
+        for (String line : text.split("\\r?\\n")) {
+            String l = line.trim();
+            if (l.length() >= 4 && !l.matches("[\\d./\\-,€ ]+") && !l.toLowerCase().startsWith("página")
+                    && !l.toLowerCase().startsWith("page")) {
+                return l.length() > 80 ? l.substring(0, 80) : l;
+            }
+        }
+        return null;
     }
 
     private String extractDate(String text) {
