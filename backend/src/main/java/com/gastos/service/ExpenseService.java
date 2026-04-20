@@ -3,9 +3,11 @@ package com.gastos.service;
 import com.gastos.dto.*;
 import com.gastos.entity.Category;
 import com.gastos.entity.Expense;
+import com.gastos.entity.User;
 import com.gastos.repository.CategoryRepository;
 import com.gastos.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,15 +30,16 @@ public class ExpenseService {
     private final InvoiceService invoiceService;
 
     public List<ExpenseResponse> findAll(Integer year, Integer month, Long categoryId) {
+        User user = currentUser();
         List<Expense> expenses;
         if (year != null && month != null && categoryId != null) {
-            expenses = expenseRepository.findByYearAndMonthAndCategoryIdOrderByDateDesc(year, month, categoryId);
+            expenses = expenseRepository.findByUserAndYearAndMonthAndCategoryIdOrderByDateDesc(user, year, month, categoryId);
         } else if (year != null && month != null) {
-            expenses = expenseRepository.findByYearAndMonthOrderByDateDesc(year, month);
+            expenses = expenseRepository.findByUserAndYearAndMonthOrderByDateDesc(user, year, month);
         } else if (year != null && categoryId != null) {
-            expenses = expenseRepository.findByYearAndCategoryIdOrderByDateDesc(year, categoryId);
+            expenses = expenseRepository.findByUserAndYearAndCategoryIdOrderByDateDesc(user, year, categoryId);
         } else if (year != null) {
-            expenses = expenseRepository.findByYearOrderByDateDesc(year);
+            expenses = expenseRepository.findByUserAndYearOrderByDateDesc(user, year);
         } else {
             expenses = expenseRepository.findAll();
         }
@@ -44,13 +47,13 @@ public class ExpenseService {
     }
 
     public ExpenseResponse findById(Long id) {
-        return expenseRepository.findById(id)
+        return expenseRepository.findByIdAndUser(id, currentUser())
                 .map(this::toResponse)
                 .orElseThrow(() -> new IllegalArgumentException("Gasto no encontrado"));
     }
 
     public List<Integer> findAvailableYears() {
-        List<Integer> years = expenseRepository.findDistinctYears();
+        List<Integer> years = expenseRepository.findDistinctYearsByUser(currentUser());
         if (years.isEmpty()) {
             years = List.of(java.time.LocalDate.now().getYear());
         }
@@ -59,7 +62,8 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseResponse create(ExpenseRequest request) {
-        Category category = resolveCategory(request.getCategoryId());
+        User user = currentUser();
+        Category category = resolveCategory(request.getCategoryId(), user);
         Expense expense = Expense.builder()
                 .name(request.getName())
                 .amount(request.getAmount())
@@ -68,15 +72,17 @@ public class ExpenseService {
                 .month(request.getDate().getMonthValue())
                 .category(category)
                 .description(request.getDescription())
+                .user(user)
                 .build();
         return toResponse(expenseRepository.save(expense));
     }
 
     @Transactional
     public ExpenseResponse update(Long id, ExpenseRequest request) {
-        Expense expense = expenseRepository.findById(id)
+        User user = currentUser();
+        Expense expense = expenseRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new IllegalArgumentException("Gasto no encontrado"));
-        Category category = resolveCategory(request.getCategoryId());
+        Category category = resolveCategory(request.getCategoryId(), user);
         expense.setName(request.getName());
         expense.setAmount(request.getAmount());
         expense.setDate(request.getDate());
@@ -89,7 +95,7 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseResponse move(Long id, MoveExpenseRequest request) {
-        Expense expense = expenseRepository.findById(id)
+        Expense expense = expenseRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(() -> new IllegalArgumentException("Gasto no encontrado"));
         expense.setYear(request.getYear());
         expense.setMonth(request.getMonth());
@@ -101,21 +107,25 @@ public class ExpenseService {
 
     @Transactional
     public void delete(Long id) {
+        expenseRepository.findByIdAndUser(id, currentUser())
+                .orElseThrow(() -> new IllegalArgumentException("Gasto no encontrado"));
         expenseRepository.deleteById(id);
     }
 
     public YearStatsResponse getYearStats(Integer year) {
-        BigDecimal total = expenseRepository.sumAmountByYear(year);
-        Long count = expenseRepository.countByYear(year);
+        User user = currentUser();
+        BigDecimal total = expenseRepository.sumAmountByUserAndYear(user, year);
+        Long count = expenseRepository.countByUserAndYear(user, year);
 
         List<YearStatsResponse.MonthStat> monthlyStats = IntStream.rangeClosed(1, 12)
                 .mapToObj(month -> {
-                    BigDecimal monthAmount = expenseRepository.sumAmountByYearAndMonth(year, month);
+                    BigDecimal monthAmount = expenseRepository.sumAmountByUserAndYearAndMonth(user, year, month);
+                    long monthCount = expenseRepository.findByUserAndYearAndMonthOrderByDateDesc(user, year, month).size();
                     return YearStatsResponse.MonthStat.builder()
                             .month(month)
                             .monthName(MONTH_NAMES[month - 1])
                             .amount(monthAmount)
-                            .count(expenseRepository.findByYearAndMonthOrderByDateDesc(year, month).stream().count())
+                            .count(monthCount)
                             .build();
                 })
                 .toList();
@@ -128,9 +138,13 @@ public class ExpenseService {
                 .build();
     }
 
-    private Category resolveCategory(Long categoryId) {
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
+    private Category resolveCategory(Long categoryId, User user) {
         if (categoryId == null) return null;
-        return categoryRepository.findById(categoryId)
+        return categoryRepository.findByIdAndUser(categoryId, user)
                 .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada"));
     }
 

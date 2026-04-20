@@ -41,6 +41,12 @@ public class Expense {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User user;
+
     @Column(length = 500)
     private String description;
 

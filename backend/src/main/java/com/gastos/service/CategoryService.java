@@ -2,8 +2,10 @@ package com.gastos.service;
 
 import com.gastos.dto.CategoryDTO;
 import com.gastos.entity.Category;
+import com.gastos.entity.User;
 import com.gastos.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,27 +19,28 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     public List<CategoryDTO> findAll() {
-        return categoryRepository.findAll().stream()
-                .map(this::toDTO)
-                .toList();
+        return categoryRepository.findAllByUserOrderByNameAsc(currentUser())
+                .stream().map(this::toDTO).toList();
     }
 
     @Transactional
     public CategoryDTO create(CategoryDTO dto) {
-        if (categoryRepository.existsByName(dto.getName())) {
+        User user = currentUser();
+        if (categoryRepository.existsByNameAndUser(dto.getName(), user)) {
             throw new IllegalArgumentException("Ya existe una categoría con ese nombre");
         }
         Category category = Category.builder()
                 .name(dto.getName())
                 .color(dto.getColor())
                 .icon(dto.getIcon())
+                .user(user)
                 .build();
         return toDTO(categoryRepository.save(category));
     }
 
     @Transactional
     public CategoryDTO update(Long id, CategoryDTO dto) {
-        Category category = categoryRepository.findById(id)
+        Category category = categoryRepository.findByIdAndUser(id, currentUser())
                 .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada"));
         category.setName(dto.getName());
         category.setColor(dto.getColor());
@@ -47,7 +50,13 @@ public class CategoryService {
 
     @Transactional
     public void delete(Long id) {
+        categoryRepository.findByIdAndUser(id, currentUser())
+                .orElseThrow(() -> new IllegalArgumentException("Categoría no encontrada"));
         categoryRepository.deleteById(id);
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     private CategoryDTO toDTO(Category c) {
