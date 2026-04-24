@@ -37,16 +37,18 @@ public class EmailService {
             String budgetStr = fmt.format(budget);
             double pct = Math.round((totalSpent / budget) * 100.0);
 
+            log.info("Construyendo email para {} → de: {}", user.getEmail(), fromAddress);
             MimeMessage msg = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
             helper.setFrom(fromAddress);
             helper.setTo(user.getEmail());
             helper.setSubject("⚠️ Has superado tu límite mensual de gastos");
             helper.setText(buildHtml(user.getName(), totalStr, budgetStr, pct), true);
+            log.info("Enviando email via SMTP...");
             mailSender.send(msg);
-            log.info("Alerta de presupuesto enviada a {}", user.getEmail());
+            log.info("✅ Email enviado correctamente a {}", user.getEmail());
         } catch (Exception e) {
-            log.error("Error enviando email de alerta a {}: {}", user.getEmail(), e.getMessage());
+            log.error("❌ Error enviando email a {} → {}: {}", user.getEmail(), e.getClass().getSimpleName(), e.getMessage(), e);
         }
     }
 
