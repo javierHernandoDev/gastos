@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Receipt, FileText, Home, LogOut } from 'lucide-react'
+import { LayoutDashboard, Receipt, FileText, Tag, Home, LogOut } from 'lucide-react'
 import clsx from 'clsx'
 import { removeToken, getStoredUser } from '@/lib/auth'
 
 const nav = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/gastos', label: 'Gastos', icon: Receipt },
+  { href: '/categorias', label: 'Categorías', icon: Tag },
   { href: '/facturas', label: 'Facturas', icon: FileText },
 ]
 
