@@ -1,8 +1,6 @@
 package com.gastos.controller;
 
-import com.gastos.dto.InvoiceAnalysisResponse;
 import com.gastos.dto.InvoiceResponse;
-import com.gastos.service.InvoiceAnalysisService;
 import com.gastos.service.InvoiceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +16,6 @@ import java.util.List;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
-    private final InvoiceAnalysisService invoiceAnalysisService;
 
     @GetMapping("/expense/{expenseId}")
     public List<InvoiceResponse> findByExpense(@PathVariable Long expenseId) {
@@ -35,12 +32,6 @@ public class InvoiceController {
             @PathVariable Long expenseId,
             @RequestParam("file") MultipartFile file) throws IOException {
         return ResponseEntity.ok(invoiceService.upload(expenseId, file));
-    }
-
-    @PostMapping("/analyze")
-    public ResponseEntity<InvoiceAnalysisResponse> analyze(
-            @RequestParam("file") MultipartFile file) {
-        return ResponseEntity.ok(invoiceAnalysisService.analyze(file));
     }
 
     @DeleteMapping("/{id}")
