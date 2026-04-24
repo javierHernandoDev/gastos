@@ -80,16 +80,15 @@ export default function ConfiguracionPage() {
             </p>
           </div>
 
-          {/* SMTP notice */}
+          {/* Resend notice */}
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 space-y-1">
-            <p className="font-medium">⚙️ Requiere configuración SMTP</p>
-            <p>Para que el correo funcione añade estas variables de entorno en Railway:</p>
+            <p className="font-medium">⚙️ Requiere API key de Resend</p>
+            <p>Para que el correo funcione añade esta variable en Railway:</p>
             <ul className="mt-1 space-y-0.5 font-mono text-xs">
-              <li><span className="font-semibold">MAIL_USERNAME</span> — tu correo Gmail</li>
-              <li><span className="font-semibold">MAIL_PASSWORD</span> — contraseña de aplicación de Google</li>
+              <li><span className="font-semibold">RESEND_API_KEY</span> — tu API key de resend.com</li>
             </ul>
             <p className="text-xs mt-1">
-              Genera la contraseña en: <span className="font-mono">myaccount.google.com → Seguridad → Contraseñas de aplicaciones</span>
+              Regístrate gratis en <span className="font-mono">resend.com</span> → API Keys → Create API Key
             </p>
           </div>
 
