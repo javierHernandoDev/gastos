@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { X, Upload, File as FileIcon, Loader2 } from 'lucide-react'
+import { X, Upload, File as FileIcon, Loader2, Sparkles, AlertCircle } from 'lucide-react'
 import { Category, Expense, ExpenseRequest } from '@/lib/types'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -18,6 +18,8 @@ interface Props {
 export default function ExpenseModal({ expense, categories, onSaved, onClose }: Props) {
   const isEditing = !!expense
   const [loading, setLoading] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysisInfo, setAnalysisInfo] = useState<string | null>(null)
   const [invoices, setInvoices] = useState(expense?.invoices ?? [])
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -33,8 +35,32 @@ export default function ExpenseModal({ expense, categories, onSaved, onClose }: 
     setForm(f => ({ ...f, [field]: value }))
   }
 
-  function handleFileSelected(file: File) {
+  async function handleFileSelected(file: File) {
     setPendingFile(file)
+    setAnalysisInfo(null)
+    setAnalyzing(true)
+    try {
+      const result = await api.invoices.analyze(file)
+      if (result.success) {
+        const filled: string[] = []
+        if (result.name) { set('name', result.name); filled.push('nombre') }
+        if (result.date) { set('date', result.date); filled.push('fecha') }
+        if (result.amount != null) { set('amount', result.amount); filled.push('importe') }
+        if (result.category) {
+          const match = categories.find(c => c.name.toLowerCase() === result.category!.toLowerCase())
+          if (match) { set('categoryId', match.id); filled.push('categoría') }
+          else setAnalysisInfo(`Categoría sugerida: "${result.category}" (no encontrada en tu lista)`)
+        }
+        if (filled.length > 0) toast.success(`Extraído de la factura: ${filled.join(', ')}`)
+        else toast('No se encontraron datos en la factura', { icon: '⚠️' })
+      } else {
+        toast(result.message || 'No se pudo analizar la factura', { icon: '⚠️' })
+      }
+    } catch {
+      toast('Error al analizar la factura', { icon: '⚠️' })
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -75,8 +101,9 @@ export default function ExpenseModal({ expense, categories, onSaved, onClose }: 
           {!isEditing && (
             <div className="mb-5">
               <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-4 w-4 text-indigo-500" />
                 <span className="text-sm font-medium text-slate-700">Factura</span>
-                <span className="text-xs text-slate-400">(opcional)</span>
+                <span className="text-xs text-slate-400">(opcional · extrae datos con OCR)</span>
               </div>
 
               <input
@@ -93,19 +120,24 @@ export default function ExpenseModal({ expense, categories, onSaved, onClose }: 
               {pendingFile ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-2">
                   <div className="flex items-center gap-3">
-                    <FileIcon className="h-5 w-5 text-indigo-500 flex-shrink-0" />
+                    {analyzing
+                      ? <Loader2 className="h-5 w-5 text-indigo-500 animate-spin flex-shrink-0" />
+                      : <FileIcon className="h-5 w-5 text-indigo-500 flex-shrink-0" />}
                     <span className="flex-1 text-sm text-slate-700 truncate">{pendingFile.name}</span>
                     <button
                       type="button"
-                      onClick={() => {
-                        setPendingFile(null)
-                        if (fileInputRef.current) fileInputRef.current.value = ''
-                      }}
+                      onClick={() => { setPendingFile(null); setAnalysisInfo(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
                       className="text-slate-400 hover:text-red-500"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
+                  {analyzing && <p className="text-xs text-indigo-600 font-medium">Analizando factura con OCR...</p>}
+                  {analysisInfo && !analyzing && (
+                    <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{analysisInfo}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div
@@ -209,7 +241,7 @@ export default function ExpenseModal({ expense, categories, onSaved, onClose }: 
             form="expense-form"
             type="submit"
             className="btn-primary"
-            disabled={loading}
+            disabled={loading || analyzing}
           >
             {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</> : isEditing ? 'Guardar cambios' : 'Crear gasto'}
           </button>

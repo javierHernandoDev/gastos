@@ -1,4 +1,4 @@
-import { Category, Expense, ExpenseRequest, Invoice, LoginRequest, MoveExpenseRequest, RegisterRequest, AuthResponse, YearStats } from './types'
+import { Category, Expense, ExpenseRequest, Invoice, InvoiceAnalysis, LoginRequest, MoveExpenseRequest, RegisterRequest, AuthResponse, YearStats } from './types'
 import { getToken, removeToken } from './auth'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api'
@@ -88,5 +88,22 @@ export const api = {
     },
     delete: (id: number) =>
       request<void>(`/invoices/${id}`, { method: 'DELETE' }),
+    analyze: async (file: File): Promise<InvoiceAnalysis> => {
+      const form = new FormData()
+      form.append('file', file)
+      const token = getToken()
+      const res = await fetch(`${BASE_URL}/invoices/analyze`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      })
+      if (res.status === 401 || res.status === 403) {
+        removeToken()
+        window.location.href = '/login'
+        throw new Error('Sesión expirada')
+      }
+      if (!res.ok) throw new Error(`Error ${res.status}`)
+      return res.json()
+    },
   },
 }
