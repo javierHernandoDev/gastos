@@ -28,6 +28,7 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final CategoryRepository categoryRepository;
     private final InvoiceService invoiceService;
+    private final EmailService emailService;
 
     public List<ExpenseResponse> findAll(Integer year, Integer month, Long categoryId) {
         User user = currentUser();
@@ -64,17 +65,25 @@ public class ExpenseService {
     public ExpenseResponse create(ExpenseRequest request) {
         User user = currentUser();
         Category category = resolveCategory(request.getCategoryId(), user);
+
+        int year  = request.getDate().getYear();
+        int month = request.getDate().getMonthValue();
+        double totalBefore = expenseRepository.sumAmountByUserAndYearAndMonth(user, year, month).doubleValue();
+
         Expense expense = Expense.builder()
                 .name(request.getName())
                 .amount(request.getAmount())
                 .date(request.getDate())
-                .year(request.getDate().getYear())
-                .month(request.getDate().getMonthValue())
+                .year(year)
+                .month(month)
                 .category(category)
                 .description(request.getDescription())
                 .user(user)
                 .build();
-        return toResponse(expenseRepository.save(expense));
+        ExpenseResponse response = toResponse(expenseRepository.save(expense));
+
+        checkBudget(user, year, month, totalBefore, request.getAmount().doubleValue());
+        return response;
     }
 
     @Transactional
@@ -82,15 +91,33 @@ public class ExpenseService {
         User user = currentUser();
         Expense expense = expenseRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new IllegalArgumentException("Gasto no encontrado"));
+
+        int year  = request.getDate().getYear();
+        int month = request.getDate().getMonthValue();
+        double totalBefore = expenseRepository.sumAmountByUserAndYearAndMonth(user, year, month).doubleValue()
+                - expense.getAmount().doubleValue();
+
         Category category = resolveCategory(request.getCategoryId(), user);
         expense.setName(request.getName());
         expense.setAmount(request.getAmount());
         expense.setDate(request.getDate());
-        expense.setYear(request.getDate().getYear());
-        expense.setMonth(request.getDate().getMonthValue());
+        expense.setYear(year);
+        expense.setMonth(month);
         expense.setCategory(category);
         expense.setDescription(request.getDescription());
-        return toResponse(expenseRepository.save(expense));
+        ExpenseResponse response = toResponse(expenseRepository.save(expense));
+
+        checkBudget(user, year, month, totalBefore, request.getAmount().doubleValue());
+        return response;
+    }
+
+    private void checkBudget(User user, int year, int month, double totalBefore, double addedAmount) {
+        if (user.getMonthlyBudget() == null) return;
+        double budget     = user.getMonthlyBudget();
+        double totalAfter = totalBefore + addedAmount;
+        if (totalBefore < budget && totalAfter >= budget) {
+            emailService.sendBudgetAlert(user, totalAfter, budget);
+        }
     }
 
     @Transactional

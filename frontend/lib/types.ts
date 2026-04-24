@@ -79,6 +79,10 @@ export interface InvoiceAnalysis {
   message?: string
 }
 
+export interface UserSettings {
+  monthlyBudget: number | null
+}
+
 export interface AuthResponse {
   token: string
   name: string

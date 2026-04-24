@@ -1,4 +1,4 @@
-import { Category, Expense, ExpenseRequest, Invoice, InvoiceAnalysis, LoginRequest, MoveExpenseRequest, RegisterRequest, AuthResponse, YearStats } from './types'
+import { Category, Expense, ExpenseRequest, Invoice, InvoiceAnalysis, LoginRequest, MoveExpenseRequest, RegisterRequest, AuthResponse, YearStats, UserSettings } from './types'
 import { getToken, removeToken } from './auth'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api'
@@ -105,5 +105,11 @@ export const api = {
       if (!res.ok) throw new Error(`Error ${res.status}`)
       return res.json()
     },
+  },
+
+  settings: {
+    get: () => request<UserSettings>('/settings'),
+    update: (data: UserSettings) =>
+      request<UserSettings>('/settings', { method: 'PUT', body: JSON.stringify(data) }),
   },
 }
