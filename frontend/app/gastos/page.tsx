@@ -81,28 +81,31 @@ export default function GastosPage() {
       {/* Budget indicator — only when a month is selected and budget is set */}
       {month && settings?.monthlyBudget != null && (() => {
         const budget = settings.monthlyBudget!
-        const pct = Math.min(Math.round((total / budget) * 100), 100)
+        const rawPct = total / budget * 100
+        const pct = Math.min(Math.round(rawPct), 100)
         const over = total >= budget
+        const barColor = over ? '#ef4444' : rawPct >= 80 ? '#f59e0b' : '#6366f1'
         return (
-          <div className={`rounded-xl border px-4 py-3 ${over ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-white'}`}>
+          <div style={{ border: `1px solid ${over ? '#fecaca' : '#e2e8f0'}`, background: over ? '#fef2f2' : '#ffffff' }}
+               className="rounded-xl px-4 py-3">
             <div className="flex items-center justify-between mb-2 gap-2">
               <div className="flex items-center gap-2">
-                {over && <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />}
-                <span className={`text-sm font-medium ${over ? 'text-red-700' : 'text-slate-700'}`}>
+                {over && <AlertTriangle className="h-4 w-4 flex-shrink-0" style={{ color: '#ef4444' }} />}
+                <span className="text-sm font-medium" style={{ color: over ? '#b91c1c' : '#374151' }}>
                   {over ? 'Límite mensual superado' : 'Presupuesto mensual'}
                 </span>
               </div>
-              <span className={`text-sm font-semibold ${over ? 'text-red-600' : 'text-slate-900'}`}>
-                {formatEur(total)} <span className="font-normal text-slate-400">/ {formatEur(budget)}</span>
+              <span className="text-sm font-semibold" style={{ color: over ? '#dc2626' : '#0f172a' }}>
+                {formatEur(total)} <span style={{ color: '#94a3b8', fontWeight: 400 }}>/ {formatEur(budget)}</span>
               </span>
             </div>
-            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: '#f1f5f9' }}>
               <div
-                className={`h-full rounded-full transition-all duration-500 ${over ? 'bg-red-500' : pct >= 80 ? 'bg-amber-400' : 'bg-indigo-500'}`}
-                style={{ width: `${pct}%` }}
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${pct}%`, background: barColor }}
               />
             </div>
-            <p className="mt-1.5 text-xs text-slate-400 text-right">{pct}% utilizado</p>
+            <p className="mt-1.5 text-xs text-right" style={{ color: '#94a3b8' }}>{pct}% utilizado</p>
           </div>
         )
       })()}

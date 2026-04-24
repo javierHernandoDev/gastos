@@ -25,8 +25,10 @@ public class EmailService {
 
     @Async
     public void sendBudgetAlert(User user, double totalSpent, double budget) {
+        log.info("Comprobando alerta presupuesto → fromAddress='{}' user={} total={} budget={}",
+                fromAddress, user.getEmail(), totalSpent, budget);
         if (fromAddress == null || fromAddress.isBlank()) {
-            log.warn("Email no configurado (MAIL_USERNAME vacío), omitiendo alerta de presupuesto");
+            log.warn("MAIL_USERNAME no configurado — no se envía email. Añade MAIL_USERNAME y MAIL_PASSWORD en Railway.");
             return;
         }
         try {

@@ -115,7 +115,7 @@ public class ExpenseService {
         if (user.getMonthlyBudget() == null) return;
         double budget     = user.getMonthlyBudget();
         double totalAfter = totalBefore + addedAmount;
-        if (totalBefore < budget && totalAfter >= budget) {
+        if (totalAfter >= budget) {
             emailService.sendBudgetAlert(user, totalAfter, budget);
         }
     }
